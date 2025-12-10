@@ -34,8 +34,9 @@ class CLI {
     });
 
     this.rl.on('close', () => {
+      // Emit SIGINT to trigger graceful shutdown
       console.log(chalk.yellow('\nExiting...'));
-      process.exit(0);
+      process.kill(process.pid, 'SIGINT');
     });
   }
 

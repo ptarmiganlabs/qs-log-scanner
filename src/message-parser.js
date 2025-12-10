@@ -25,7 +25,7 @@ class MessageParser {
       const message = messageBuffer.toString();
       const msgParts = message.split(';');
 
-      // Ensure we have at least the minimum required fields
+      // Ensure we have at least the minimum required fields (0-6 = 7 fields minimum)
       if (msgParts.length < 7) {
         return null;
       }

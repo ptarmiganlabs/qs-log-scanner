@@ -53,6 +53,9 @@ class StatsTracker {
     const subsystemStats = sourceStats.get(subsystem);
     subsystemStats.count++;
     
+    // Update sender IP to the most recent one
+    subsystemStats.senderIp = senderIp;
+    
     // Track search matches
     for (const term of matchingTerms) {
       subsystemStats.searchMatches.add(term);
