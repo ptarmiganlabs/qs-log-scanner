@@ -80,6 +80,22 @@ Configure Qlik Sense to send log messages via UDP:
    - **Port**: 9999 (or your configured port)
    - **Protocol**: UDP
 
+#### Message Types
+
+Qlik Sense can send UDP messages with different source types:
+
+- **Service-specific sources**: `/qseow-engine/`, `/qseow-proxy/`, `/qseow-repository/`, `/qseow-scheduler/`, `/qseow-qix-perf/`
+  - These capture log messages from specific Qlik Sense services
+  - Each service has its own set of subsystems
+
+- **Generic root source**: `/qseow-root/`
+  - **Most generic scenario**: Captures *all* log messages created by the Log4Net framework in QSEoW
+  - Use an XML appender that captures all log messages on the Sense server
+  - All messages are sent with the `/qseow-root/` source type
+  - Provides a comprehensive view of all logging activity across all services
+
+**Recommendation**: Start with `/qseow-root/` to capture all log events, then switch to service-specific sources if you need to focus on particular services.
+
 Refer to Qlik Sense documentation for detailed logging configuration instructions.
 
 ## Usage
@@ -198,6 +214,7 @@ When a message matches a search term:
 
 Viewing statistics with the `stats` command:
 
+**Example 1: Service-specific sources**
 ```
 === Qlik Sense Log Scanner - Statistics ===
 
@@ -215,13 +232,31 @@ Viewing statistics with the `stats` command:
 Total messages: 3706 | Active search terms: 5 | Unique subsystems: 6
 ```
 
+**Example 2: Using `/qseow-root/` (captures all log messages)**
+```
+=== Qlik Sense Log Scanner - Statistics ===
+
+┌────────────────────┬──────────────────────────────────┬──────────┬────────────────┬─────────────────┐
+│ Source             │ Subsystem                        │ Count    │ Sender IP      │ Search Matches  │
+├────────────────────┼──────────────────────────────────┼──────────┼────────────────┼─────────────────┤
+│ qseow-root         │ Engine.App                       │ 456      │ 192.168.1.10   │ error, reload   │
+│ qseow-root         │ Engine.Session                   │ 1523     │ 192.168.1.10   │ timeout         │
+│ qseow-root         │ Proxy.Authentication             │ 892      │ 192.168.1.10   │ login, error    │
+│ qseow-root         │ Proxy.Connection                 │ 445      │ 192.168.1.10   │                 │
+│ qseow-root         │ Repository.Database              │ 234      │ 192.168.1.10   │                 │
+│ qseow-root         │ Scheduler.Task                   │ 156      │ 192.168.1.10   │ failed, error   │
+└────────────────────┴──────────────────────────────────┴──────────┴────────────────┴─────────────────┘
+
+Total messages: 3706 | Active search terms: 5 | Unique subsystems: 6
+```
+
 ## UDP Message Format
 
 The scanner parses semicolon-separated UDP messages with the following structure:
 
 | Field | Index | Description |
 |-------|-------|-------------|
-| Source | 0 | Message source (e.g., `/qseow-engine/`, `/qseow-proxy/`) |
+| Source | 0 | Message source (e.g., `/qseow-engine/`, `/qseow-proxy/`, `/qseow-root/`) |
 | Log Row | 1 | Log row number |
 | ISO Timestamp | 2 | ISO 8601 timestamp |
 | Local Timestamp | 3 | Local timestamp |
@@ -262,6 +297,7 @@ The parser extracts the source by removing leading/trailing slashes and converti
 ```javascript
 let source = msgParts[0].toLowerCase().replace(/\//g, '');
 // '/qseow-engine/' becomes 'qseow-engine'
+// '/qseow-root/' becomes 'qseow-root'
 ```
 
 The subsystem is extracted directly from field 6:
