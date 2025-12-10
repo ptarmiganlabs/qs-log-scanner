@@ -1,0 +1,12 @@
+udp:
+  port: 9999  # UDP port to listen on
+  host: "0.0.0.0"  # Interface to bind to
+
+display:
+  refreshInterval: 5000  # How often to refresh the display (ms)
+  maxMessagePreview: 100  # Max characters to show in message previews
+
+logging:
+  level: info  # Logging level (error, warn, info, debug)
+  logToFile: false
+  logFilePath: ./logs/scanner.log

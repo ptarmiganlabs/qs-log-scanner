@@ -1,0 +1,29 @@
+{
+  "name": "qs-log-scanner",
+  "version": "1.0.0",
+  "description": "Scans Qlik Sense Enterprise on Windows log events sent as UDP messages",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node src/index.js"
+  },
+  "keywords": [
+    "qlik",
+    "sense",
+    "udp",
+    "log",
+    "scanner",
+    "monitoring"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "chalk": "^4.1.2",
+    "cli-table3": "^0.6.3",
+    "js-yaml": "^4.1.0",
+    "winston": "^3.11.0"
+  },
+  "engines": {
+    "node": ">=14.0.0"
+  }
+}
