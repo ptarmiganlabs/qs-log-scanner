@@ -15,7 +15,7 @@ const StatsTable = ({
   searchTermCount,
   sortColumn,
   sortAscending,
-  maxHeight
+  maxHeight,
 }) => {
   const sortIndicator = sortAscending ? "▲" : "▼";
 
@@ -210,7 +210,9 @@ const StatsTable = ({
   // Calculate available height for data rows
   // Reserve space for: title (1), header (1), separator (1), bottom separator (1), summary (2), padding (2)
   const reservedLines = 8;
-  const dataRowsHeight = maxHeight ? Math.max(5, maxHeight - reservedLines) : undefined;
+  const dataRowsHeight = maxHeight
+    ? Math.max(5, maxHeight - reservedLines)
+    : undefined;
 
   return h(
     Box,
@@ -225,10 +227,10 @@ const StatsTable = ({
     // Scrollable data rows area
     h(
       Box,
-      { 
+      {
         flexDirection: "column",
         height: dataRowsHeight,
-        overflow: "hidden"
+        overflow: "hidden",
       },
       ...dataRows
     ),
