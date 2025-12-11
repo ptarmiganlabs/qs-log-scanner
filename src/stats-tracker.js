@@ -6,10 +6,13 @@ class StatsTracker {
   constructor() {
     // Map: source -> subsystem -> stats object
     this.stats = new Map();
-    
+
     // Set of all known subsystem keys (source:subsystem)
     this.knownSubsystems = new Set();
-    
+
+    // Set of all sender IPs that have ever sent messages
+    this.allSenderIPs = new Set();
+
     // Total message count
     this.totalMessages = 0;
   }
@@ -22,14 +25,19 @@ class StatsTracker {
    */
   trackMessage(parsedMessage, matchingTerms = []) {
     const { source, subsystem, senderIp } = parsedMessage;
-    
+
     if (!source || !subsystem) {
       return false;
     }
 
+    // Track this sender IP
+    if (senderIp) {
+      this.allSenderIPs.add(senderIp);
+    }
+
     const subsystemKey = `${source}:${subsystem}`;
     const isNewSubsystem = !this.knownSubsystems.has(subsystemKey);
-    
+
     if (isNewSubsystem) {
       this.knownSubsystems.add(subsystemKey);
     }
@@ -40,22 +48,22 @@ class StatsTracker {
     }
 
     const sourceStats = this.stats.get(source);
-    
+
     // Initialize subsystem stats if needed
     if (!sourceStats.has(subsystem)) {
       sourceStats.set(subsystem, {
         count: 0,
         senderIp: senderIp,
-        searchMatches: new Set()
+        searchMatches: new Set(),
       });
     }
 
     const subsystemStats = sourceStats.get(subsystem);
     subsystemStats.count++;
-    
+
     // Update sender IP to the most recent one
     subsystemStats.senderIp = senderIp;
-    
+
     // Track search matches
     for (const term of matchingTerms) {
       subsystemStats.searchMatches.add(term);
@@ -80,7 +88,7 @@ class StatsTracker {
           subsystem,
           count: stats.count,
           senderIp: stats.senderIp,
-          searchMatches: Array.from(stats.searchMatches).sort()
+          searchMatches: Array.from(stats.searchMatches).sort(),
         });
       }
     }
@@ -113,11 +121,20 @@ class StatsTracker {
   }
 
   /**
+   * Get all unique sender IPs
+   * @returns {Array<string>} Sorted array of all sender IPs
+   */
+  getAllSenderIPs() {
+    return Array.from(this.allSenderIPs).sort();
+  }
+
+  /**
    * Reset all counters
    */
   reset() {
     this.stats.clear();
     this.knownSubsystems.clear();
+    this.allSenderIPs.clear();
     this.totalMessages = 0;
   }
 
@@ -130,7 +147,7 @@ class StatsTracker {
       totalMessages: this.totalMessages,
       uniqueSubsystems: this.knownSubsystems.size,
       timestamp: new Date().toISOString(),
-      stats: this.getAllStats()
+      stats: this.getAllStats(),
     };
   }
 }

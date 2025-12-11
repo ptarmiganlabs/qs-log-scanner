@@ -5,27 +5,27 @@
  * Main entry point - orchestrates all components
  */
 
-const fs = require('fs');
-const path = require('path');
-const yaml = require('js-yaml');
-const winston = require('winston');
-const chalk = require('chalk');
+const fs = require("fs");
+const path = require("path");
+const yaml = require("js-yaml");
+const winston = require("winston");
+const chalk = require("chalk");
 
 // Import modules
-const UdpServer = require('./udp-server');
-const MessageParser = require('./message-parser');
-const StatsTracker = require('./stats-tracker');
-const SearchManager = require('./search-manager');
-const Display = require('./display');
-const CLI = require('./cli');
+const UdpServer = require("./udp-server");
+const MessageParser = require("./message-parser");
+const StatsTracker = require("./stats-tracker");
+const SearchManager = require("./search-manager");
+const Display = require("./display");
+const CLI = require("./cli");
 
 /**
  * Load configuration
  */
 function loadConfig() {
   try {
-    const configPath = path.join(__dirname, '..', 'config', 'default.yaml');
-    const fileContents = fs.readFileSync(configPath, 'utf8');
+    const configPath = path.join(__dirname, "..", "config", "default.yaml");
+    const fileContents = fs.readFileSync(configPath, "utf8");
     return yaml.load(fileContents);
   } catch (error) {
     console.error(chalk.red(`Error loading config: ${error.message}`));
@@ -46,8 +46,8 @@ function setupLogger(config) {
           return `${timestamp} [${level}]: ${message}`;
         })
       ),
-      silent: true // Silent in console to avoid cluttering CLI
-    })
+      silent: true, // Silent in console to avoid cluttering CLI
+    }),
   ];
 
   if (config.logging.logToFile) {
@@ -58,7 +58,7 @@ function setupLogger(config) {
         format: winston.format.combine(
           winston.format.timestamp(),
           winston.format.json()
-        )
+        ),
       })
     );
   }
@@ -73,7 +73,7 @@ class QlikSenseLogScanner {
   constructor() {
     this.config = loadConfig();
     this.logger = setupLogger(this.config);
-    
+
     // Initialize components
     this.messageParser = new MessageParser();
     this.statsTracker = new StatsTracker();
@@ -84,7 +84,8 @@ class QlikSenseLogScanner {
       this.searchManager,
       this.statsTracker,
       this.display,
-      this.logger
+      this.logger,
+      this.config
     );
   }
 
@@ -92,17 +93,23 @@ class QlikSenseLogScanner {
    * Start the application
    */
   async start() {
-    console.log(chalk.bold.cyan('\n╔═══════════════════════════════════════════╗'));
-    console.log(chalk.bold.cyan('║   Qlik Sense UDP Log Scanner v1.0.0      ║'));
-    console.log(chalk.bold.cyan('╚═══════════════════════════════════════════╝\n'));
+    console.log(
+      chalk.bold.cyan("\n╔═══════════════════════════════════════════╗")
+    );
+    console.log(
+      chalk.bold.cyan("║   Qlik Sense UDP Log Scanner v1.0.0      ║")
+    );
+    console.log(
+      chalk.bold.cyan("╚═══════════════════════════════════════════╝\n")
+    );
 
     // Setup UDP message handler
-    this.udpServer.on('message', (msg, remote) => {
+    this.udpServer.on("message", (msg, remote) => {
       this.handleMessage(msg, remote);
     });
 
     // Setup error handler
-    this.udpServer.on('error', (err) => {
+    this.udpServer.on("error", (err) => {
       console.error(chalk.red(`UDP Server Error: ${err.message}`));
     });
 
@@ -127,9 +134,9 @@ class QlikSenseLogScanner {
   handleMessage(msg, remote) {
     // Parse the message
     const parsed = this.messageParser.parseMessage(msg, remote);
-    
+
     if (!parsed) {
-      this.logger.warn('Failed to parse message');
+      this.logger.warn("Failed to parse message");
       return;
     }
 
@@ -139,19 +146,24 @@ class QlikSenseLogScanner {
 
     // Check for search term matches
     const matchingTerms = this.searchManager.findMatches(
-      parsed.messageContent + ' ' + parsed.subsystem
+      parsed.messageContent + " " + parsed.subsystem
     );
 
     // Track the message
-    const isNewSubsystem = this.statsTracker.trackMessage(parsed, matchingTerms);
+    const isNewSubsystem = this.statsTracker.trackMessage(
+      parsed,
+      matchingTerms
+    );
 
     // If new subsystem discovered, show all subsystems
     if (isNewSubsystem) {
       const allStats = this.statsTracker.getAllStats();
+      const allSenderIPs = this.statsTracker.getAllSenderIPs();
       this.display.showNewSubsystemDiscovery(
         parsed.source,
         parsed.subsystem,
-        allStats
+        allStats,
+        allSenderIPs
       );
       this.display.showPrompt();
     }
@@ -172,17 +184,19 @@ class QlikSenseLogScanner {
    */
   setupGracefulShutdown() {
     const shutdown = async (signal) => {
-      console.log(chalk.yellow(`\n\nReceived ${signal}. Shutting down gracefully...`));
-      
+      console.log(
+        chalk.yellow(`\n\nReceived ${signal}. Shutting down gracefully...`)
+      );
+
       this.cli.stop();
       await this.udpServer.stop();
-      
-      console.log(chalk.green('Shutdown complete. Goodbye!\n'));
+
+      console.log(chalk.green("Shutdown complete. Goodbye!\n"));
       process.exit(0);
     };
 
-    process.on('SIGINT', () => shutdown('SIGINT'));
-    process.on('SIGTERM', () => shutdown('SIGTERM'));
+    process.on("SIGINT", () => shutdown("SIGINT"));
+    process.on("SIGTERM", () => shutdown("SIGTERM"));
   }
 }
 
