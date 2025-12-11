@@ -2,8 +2,8 @@
  * UDP server for receiving Qlik Sense log messages
  */
 
-const dgram = require('dgram');
-const EventEmitter = require('events');
+import dgram from 'dgram';
+import { EventEmitter } from 'events';
 
 class UdpServer extends EventEmitter {
   constructor(config, logger) {
@@ -63,4 +63,4 @@ class UdpServer extends EventEmitter {
   }
 }
 
-module.exports = UdpServer;
+export default UdpServer;

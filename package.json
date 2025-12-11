@@ -2,6 +2,7 @@
   "name": "qs-log-scanner",
   "version": "1.0.0",
   "description": "Scans Qlik Sense Enterprise on Windows log events sent as UDP messages",
+  "type": "module",
   "main": "src/index.js",
   "scripts": {
     "start": "node src/index.js",
@@ -20,10 +21,18 @@
   "dependencies": {
     "chalk": "^4.1.2",
     "cli-table3": "^0.6.3",
+    "ink": "^6.5.1",
+    "ink-text-input": "^6.0.0",
     "js-yaml": "^4.1.0",
+    "react": "^19.2.1",
     "winston": "^3.11.0"
   },
   "engines": {
     "node": ">=14.0.0"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.28.5",
+    "@babel/preset-react": "^7.28.5",
+    "@babel/register": "^7.28.3"
   }
 }

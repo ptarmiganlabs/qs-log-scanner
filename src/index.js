@@ -2,33 +2,40 @@
 
 /**
  * Qlik Sense Log Scanner
- * Main entry point - orchestrates all components
+ * Main entry point - orchestrates all components using Ink
  */
 
-const fs = require("fs");
-const path = require("path");
-const yaml = require("js-yaml");
-const winston = require("winston");
-const chalk = require("chalk");
+import React from 'react';
+import { render } from 'ink';
+import fs from 'fs';
+import path from 'path';
+import yaml from 'js-yaml';
+import winston from 'winston';
+import { fileURLToPath } from 'url';
 
-// Import modules
-const UdpServer = require("./udp-server");
-const MessageParser = require("./message-parser");
-const StatsTracker = require("./stats-tracker");
-const SearchManager = require("./search-manager");
-const Display = require("./display");
-const CLI = require("./cli");
+// Import services
+import UdpServer from './udp-server.js';
+import MessageParser from './message-parser.js';
+import StatsTracker from './stats-tracker.js';
+import SearchManager from './search-manager.js';
+
+// Import main App component
+import App from './components/App.js';
+
+// Get __dirname equivalent for ES modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 /**
  * Load configuration
  */
 function loadConfig() {
   try {
-    const configPath = path.join(__dirname, "..", "config", "default.yaml");
-    const fileContents = fs.readFileSync(configPath, "utf8");
+    const configPath = path.join(__dirname, '..', 'config', 'default.yaml');
+    const fileContents = fs.readFileSync(configPath, 'utf8');
     return yaml.load(fileContents);
   } catch (error) {
-    console.error(chalk.red(`Error loading config: ${error.message}`));
+    console.error(`Error loading config: ${error.message}`);
     process.exit(1);
   }
 }
@@ -67,142 +74,86 @@ function setupLogger(config) {
 }
 
 /**
- * Main application class
+ * Main application entry point
  */
-class QlikSenseLogScanner {
-  constructor() {
-    this.config = loadConfig();
-    this.logger = setupLogger(this.config);
+async function main() {
+  // Load configuration
+  const config = loadConfig();
+  const logger = setupLogger(config);
 
-    // Initialize components
-    this.messageParser = new MessageParser();
-    this.statsTracker = new StatsTracker();
-    this.searchManager = new SearchManager();
-    this.display = new Display(this.config);
-    this.udpServer = new UdpServer(this.config, this.logger);
-    this.cli = new CLI(
-      this.searchManager,
-      this.statsTracker,
-      this.display,
-      this.logger,
-      this.config
-    );
-  }
+  // Initialize services
+  const messageParser = new MessageParser();
+  const statsTracker = new StatsTracker();
+  const searchManager = new SearchManager();
+  const udpServer = new UdpServer(config, logger);
 
-  /**
-   * Start the application
-   */
-  async start() {
-    console.log(
-      chalk.bold.cyan("\n╔═══════════════════════════════════════════╗")
-    );
-    console.log(
-      chalk.bold.cyan("║   Qlik Sense UDP Log Scanner v1.0.0      ║")
-    );
-    console.log(
-      chalk.bold.cyan("╚═══════════════════════════════════════════╝\n")
-    );
-
-    // Setup UDP message handler
-    this.udpServer.on("message", (msg, remote) => {
-      this.handleMessage(msg, remote);
-    });
-
-    // Setup error handler
-    this.udpServer.on("error", (err) => {
-      console.error(chalk.red(`UDP Server Error: ${err.message}`));
-    });
-
-    // Start UDP server
-    try {
-      await this.udpServer.start();
-    } catch (error) {
-      console.error(chalk.red(`Failed to start UDP server: ${error.message}`));
-      process.exit(1);
-    }
-
-    // Start CLI
-    this.cli.start();
-
-    // Setup graceful shutdown
-    this.setupGracefulShutdown();
-  }
-
-  /**
-   * Handle incoming UDP message
-   */
-  handleMessage(msg, remote) {
+  // Setup UDP message handler
+  udpServer.on('message', (msg, remote) => {
     // Parse the message
-    const parsed = this.messageParser.parseMessage(msg, remote);
+    const parsed = messageParser.parseMessage(msg, remote);
 
     if (!parsed) {
-      this.logger.warn("Failed to parse message");
+      logger.warn('Failed to parse message');
       return;
     }
 
-    this.logger.debug(
-      `Parsed message from ${parsed.source}/${parsed.subsystem}`
-    );
+    logger.debug(`Parsed message from ${parsed.source}/${parsed.subsystem}`);
 
     // Check for search term matches
-    const matchingTerms = this.searchManager.findMatches(
-      parsed.messageContent + " " + parsed.subsystem
+    const matchingTerms = searchManager.findMatches(
+      parsed.messageContent + ' ' + parsed.subsystem
     );
 
-    // Track the message
-    const isNewSubsystem = this.statsTracker.trackMessage(
-      parsed,
-      matchingTerms
-    );
+    // Track the message (emits events for new subsystems)
+    statsTracker.trackMessage(parsed, matchingTerms);
+  });
 
-    // If new subsystem discovered, show all subsystems
-    if (isNewSubsystem) {
-      const allStats = this.statsTracker.getAllStats();
-      const allSenderIPs = this.statsTracker.getAllSenderIPs();
-      this.display.showNewSubsystemDiscovery(
-        parsed.source,
-        parsed.subsystem,
-        allStats,
-        allSenderIPs
-      );
-      this.display.showPrompt();
-    }
+  // Setup error handler
+  udpServer.on('error', (err) => {
+    logger.error(`UDP Server Error: ${err.message}`);
+  });
 
-    // If search terms matched, display the match
-    if (matchingTerms.length > 0) {
-      this.display.showSearchMatch(
-        parsed,
-        matchingTerms,
-        this.config.display.maxMessagePreview
-      );
-      this.display.showPrompt();
-    }
+  // Start UDP server
+  try {
+    await udpServer.start();
+  } catch (error) {
+    console.error(`Failed to start UDP server: ${error.message}`);
+    process.exit(1);
   }
 
-  /**
-   * Setup graceful shutdown handlers
-   */
-  setupGracefulShutdown() {
-    const shutdown = async (signal) => {
-      console.log(
-        chalk.yellow(`\n\nReceived ${signal}. Shutting down gracefully...`)
-      );
+  // Setup graceful shutdown
+  let inkInstance = null;
 
-      this.cli.stop();
-      await this.udpServer.stop();
+  const shutdown = async (signal) => {
+    if (inkInstance) {
+      inkInstance.unmount();
+    }
+    await udpServer.stop();
+    console.log(`\nShutdown complete. Goodbye!`);
+    process.exit(0);
+  };
 
-      console.log(chalk.green("Shutdown complete. Goodbye!\n"));
-      process.exit(0);
-    };
+  process.on('SIGINT', () => shutdown('SIGINT'));
+  process.on('SIGTERM', () => shutdown('SIGTERM'));
 
-    process.on("SIGINT", () => shutdown("SIGINT"));
-    process.on("SIGTERM", () => shutdown("SIGTERM"));
-  }
+  // Render the Ink application
+  inkInstance = render(
+    React.createElement(App, {
+      udpServer,
+      statsTracker,
+      searchManager,
+      config,
+      logger,
+      onQuit: () => shutdown('User quit')
+    })
+  );
+
+  // Wait for the app to finish
+  await inkInstance.waitUntilExit();
 }
 
 // Start the application
-const app = new QlikSenseLogScanner();
-app.start().catch((error) => {
-  console.error(chalk.red(`Fatal error: ${error.message}`));
+main().catch((error) => {
+  console.error(`Fatal error: ${error.message}`);
   process.exit(1);
 });

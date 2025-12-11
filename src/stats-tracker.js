@@ -24,7 +24,7 @@ class StatsTracker {
    * @returns {boolean} True if this is a new subsystem
    */
   trackMessage(parsedMessage, matchingTerms = []) {
-    const { source, subsystem, senderIp } = parsedMessage;
+    const { source, subsystem, senderIp, logLevel } = parsedMessage;
 
     if (!source || !subsystem) {
       return false;
@@ -53,7 +53,8 @@ class StatsTracker {
     if (!sourceStats.has(subsystem)) {
       sourceStats.set(subsystem, {
         count: 0,
-        senderIp: senderIp,
+        senderIps: new Set(),
+        logLevels: new Set(),
         searchMatches: new Set(),
       });
     }
@@ -61,8 +62,15 @@ class StatsTracker {
     const subsystemStats = sourceStats.get(subsystem);
     subsystemStats.count++;
 
-    // Update sender IP to the most recent one
-    subsystemStats.senderIp = senderIp;
+    // Track all sender IPs for this subsystem
+    if (senderIp) {
+      subsystemStats.senderIps.add(senderIp);
+    }
+
+    // Track log levels for this subsystem
+    if (logLevel) {
+      subsystemStats.logLevels.add(logLevel);
+    }
 
     // Track search matches
     for (const term of matchingTerms) {
@@ -87,7 +95,8 @@ class StatsTracker {
           source,
           subsystem,
           count: stats.count,
-          senderIp: stats.senderIp,
+          senderIps: Array.from(stats.senderIps).sort(),
+          logLevels: Array.from(stats.logLevels).sort(),
           searchMatches: Array.from(stats.searchMatches).sort(),
         });
       }
@@ -152,4 +161,4 @@ class StatsTracker {
   }
 }
 
-module.exports = StatsTracker;
+export default StatsTracker;
