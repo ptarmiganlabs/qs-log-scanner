@@ -1,6 +1,8 @@
 udp:
   port: 9999 # UDP port to listen on
   host: "192.168.3.250" # Interface to bind to
+  receiveBufferSize: 8388608 # UDP socket receive buffer size in bytes (8MB)
+  maxQueueSize: 10000 # Maximum messages to queue before dropping
 
 display:
   refreshInterval: 5000 # How often to refresh the display (ms)

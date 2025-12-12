@@ -1,13 +1,14 @@
 /**
  * Main application component - Split screen layout
  * Upper: Stats table with notifications
- * Lower: Fixed command menu
+ * Lower: Fixed command menu and stats panel
  */
 
 import React, { useState, useEffect, useCallback } from "react";
 import { Box, useApp, useInput, useStdout } from "ink";
 import StatsTable from "./StatsTable.js";
 import CommandMenu from "./CommandMenu.js";
+import StatsPanel from "./StatsPanel.js";
 import InputModal from "./InputModal.js";
 import NotificationBar from "./NotificationBar.js";
 import HelpView from "./HelpView.js";
@@ -35,10 +36,15 @@ const App = ({
   const [totalMessages, setTotalMessages] = useState(0);
   const [senderIPs, setSenderIPs] = useState([]);
   const [uniqueSubsystems, setUniqueSubsystems] = useState(0);
+  const [droppedMessages, setDroppedMessages] = useState(0);
+  const [queueSize, setQueueSize] = useState(0);
 
   // Sort state
   const [sortColumn, setSortColumn] = useState("source");
   const [sortAscending, setSortAscending] = useState(true);
+
+  // Scroll state for stats table
+  const [scrollOffset, setScrollOffset] = useState(0);
 
   // Auto-refresh state
   const [autoRefresh, setAutoRefresh] = useState(
@@ -96,7 +102,13 @@ const App = ({
     setTotalMessages(statsTracker.getTotalMessages());
     setSenderIPs(statsTracker.getAllSenderIPs());
     setUniqueSubsystems(statsTracker.getUniqueSubsystemCount());
-  }, [statsTracker, sortColumn, sortAscending]);
+
+    // Update UDP server stats
+    if (udpServer && udpServer.getDroppedMessageCount) {
+      setDroppedMessages(udpServer.getDroppedMessageCount());
+      setQueueSize(udpServer.getQueueSize());
+    }
+  }, [statsTracker, udpServer, sortColumn, sortAscending]);
 
   // Show notification helper
   const showNotification = useCallback((message, type = "info") => {
@@ -210,6 +222,7 @@ const App = ({
 
   const handleReset = useCallback(() => {
     statsTracker.reset();
+    setScrollOffset(0);
     refreshStats();
     showNotification("All counters reset", "success");
   }, [statsTracker, refreshStats, showNotification]);
@@ -277,18 +290,47 @@ const App = ({
         );
         break;
       case "o":
-        // Cycle through sort columns
+        // Cycle through sort columns and directions: source↑ → source↓ → subsystem↑ → subsystem↓ → etc.
         const columns = ["source", "subsystem", "count", "ip"];
         const currentIndex = columns.indexOf(sortColumn);
-        const nextIndex = (currentIndex + 1) % columns.length;
-        if (columns[nextIndex] === sortColumn) {
-          setSortAscending(!sortAscending);
+
+        if (sortAscending) {
+          // Currently ascending, switch to descending for same column
+          setSortAscending(false);
+          showNotification(`Sorting by ${sortColumn} (descending)`, "info");
         } else {
+          // Currently descending, move to next column with ascending
+          const nextIndex = (currentIndex + 1) % columns.length;
           setSortColumn(columns[nextIndex]);
           setSortAscending(true);
+          showNotification(
+            `Sorting by ${columns[nextIndex]} (ascending)`,
+            "info"
+          );
         }
-        showNotification(`Sorting by ${columns[nextIndex]}`, "info");
         break;
+    }
+
+    // Arrow key scrolling (only in stats view)
+    if (currentView === "stats" && !activeModal) {
+      const commandMenuHeight = 7;
+      const statsContentHeight = (stdout?.rows || 24) - commandMenuHeight - 1;
+      const reservedLines = 7;
+
+      // Simple calculation - each row is 1 line now
+      const availableLines = Math.max(3, statsContentHeight - reservedLines);
+      const visibleRows = Math.min(stats.length, availableLines);
+      const maxScroll = Math.max(0, stats.length - visibleRows);
+
+      if (key.upArrow) {
+        setScrollOffset((prev) => Math.max(0, prev - 1));
+      } else if (key.downArrow) {
+        setScrollOffset((prev) => Math.min(maxScroll, prev + 1));
+      } else if (key.pageUp) {
+        setScrollOffset((prev) => Math.max(0, prev - visibleRows));
+      } else if (key.pageDown) {
+        setScrollOffset((prev) => Math.min(maxScroll, prev + visibleRows));
+      }
     }
 
     // Enter key - manual refresh
@@ -304,21 +346,20 @@ const App = ({
   };
 
   const terminalHeight = stdout?.rows || 24;
-  // Reserve space for command menu (7 lines) and notification bar (1 line)
-  const contentHeight = terminalHeight - 9;
+  // Reserve space for command menu (7 lines: 1 title + 4 menu rows + 2 border) and notification bar (1 line)
+  const commandMenuHeight = 7;
+  const contentHeight = terminalHeight - commandMenuHeight - 1;
 
   // Build the content view
   let contentView;
   if (currentView === "stats") {
     contentView = h(StatsTable, {
       stats,
-      totalMessages,
-      senderIPs,
-      uniqueSubsystems,
-      searchTermCount: searchManager.getTermCount(),
       sortColumn,
       sortAscending,
       maxHeight: contentHeight,
+      maxWidth: stdout?.columns || 80,
+      scrollOffset,
     });
   } else if (currentView === "help") {
     contentView = h(HelpView);
@@ -356,16 +397,32 @@ const App = ({
   return h(
     Box,
     { flexDirection: "column", height: terminalHeight },
-    // Upper area - content view
-    h(Box, { flexDirection: "column", flexGrow: 1 }, contentView),
+    // Upper area - content view with explicit height and overflow hidden
+    h(
+      Box,
+      { flexDirection: "column", height: contentHeight, overflow: "hidden" },
+      contentView
+    ),
     // Notification bar
     notification &&
       h(NotificationBar, {
         message: notification.message,
         type: notification.type,
       }),
-    // Lower area - fixed command menu
-    h(CommandMenu, { autoRefresh }),
+    // Lower area - command menu and stats panel side by side
+    h(
+      Box,
+      { height: commandMenuHeight, flexDirection: "row" },
+      h(CommandMenu, { autoRefresh }),
+      h(StatsPanel, {
+        totalMessages,
+        uniqueSubsystems,
+        searchTermCount: searchManager.getTermCount(),
+        senderIPs,
+        droppedMessages,
+        queueSize,
+      })
+    ),
     // Modal overlay
     modal
   );

@@ -9,13 +9,11 @@ const h = React.createElement;
 
 const StatsTable = ({
   stats,
-  totalMessages,
-  senderIPs,
-  uniqueSubsystems,
-  searchTermCount,
   sortColumn,
   sortAscending,
   maxHeight,
+  maxWidth,
+  scrollOffset = 0,
 }) => {
   const sortIndicator = sortAscending ? "▲" : "▼";
 
@@ -26,23 +24,77 @@ const StatsTable = ({
     return { color: "cyan" };
   };
 
+  const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
+
   // Calculate dynamic subsystem column width based on longest string
   const maxSubsystemLength = stats.reduce(
     (max, stat) => Math.max(max, stat.subsystem ? stat.subsystem.length : 0),
     0
   );
 
-  // Set minimum width of 20 and maximum of 80 for subsystem column
-  const subsystemWidth = Math.min(80, Math.max(20, maxSubsystemLength + 2));
+  // Constrain total table width to available terminal width to avoid Ink wrapping rows
+  // (wrapped rows can push headers out of view when there are many rows).
+  const paddingX = 2; // StatsTable uses paddingX: 1
+  const usableWidth = Math.max(40, (maxWidth || 80) - paddingX);
+
+  const fixedWidths = {
+    source: 15,
+    count: 12,
+    ip: 12,
+    logLevel: 12,
+  };
+
+  const subsystemDesired = clamp(maxSubsystemLength + 2, 20, 120);
+  const matchesDesired = 20;
+
+  const remaining = Math.max(
+    0,
+    usableWidth -
+      fixedWidths.source -
+      fixedWidths.count -
+      fixedWidths.ip -
+      fixedWidths.logLevel
+  );
+
+  // Ensure at least a small Matches column (for readability) while giving Subsystem
+  // as much space as possible.
+  const minSubsystem = 10;
+  const minMatches = 5;
+
+  let matchesWidth = clamp(matchesDesired, minMatches, remaining);
+  let subsystemWidth = clamp(
+    subsystemDesired,
+    minSubsystem,
+    remaining - matchesWidth
+  );
+
+  // If subsystem couldn't fit, reduce matches to free space.
+  if (subsystemWidth < minSubsystem && remaining > 0) {
+    matchesWidth = clamp(
+      matchesWidth,
+      0,
+      Math.max(0, remaining - minSubsystem)
+    );
+    subsystemWidth = clamp(
+      subsystemDesired,
+      minSubsystem,
+      remaining - matchesWidth
+    );
+  }
+
+  // Final safety: keep within remaining.
+  if (subsystemWidth + matchesWidth > remaining) {
+    matchesWidth = Math.max(0, remaining - subsystemWidth);
+  }
 
   // Column widths
   const colWidths = {
-    source: 25,
+    source: fixedWidths.source,
     subsystem: subsystemWidth,
-    count: 8,
-    ip: 18,
-    logLevel: 12,
-    matches: 20,
+    count: fixedWidths.count,
+    ip: fixedWidths.ip,
+    logLevel: fixedWidths.logLevel,
+    matches: matchesWidth,
   };
 
   const totalWidth =
@@ -55,6 +107,7 @@ const StatsTable = ({
 
   const truncate = (str, len) => {
     if (!str) return "";
+    if (len <= 0) return "";
     return str.length > len ? str.substring(0, len - 1) + "…" : str.padEnd(len);
   };
 
@@ -123,119 +176,136 @@ const StatsTable = ({
     h(Box, { width: colWidths.matches }, h(Text, { color: "cyan" }, "Matches"))
   );
 
-  // Build data rows
-  const dataRows = stats.map((stat, index) => {
+  // Calculate visible rows based on scroll offset
+  // Reserved: title(1) + header(1) + top separator(1) + bottom separator(1) + scroll indicator(1) + padding(2) = 7
+  const reservedLines = 7;
+
+  // Calculate available lines for data - each row is now 1 line
+  const availableLines = maxHeight
+    ? Math.max(1, maxHeight - reservedLines)
+    : 20;
+
+  // Calculate how many rows we can actually show
+  const visibleRowCount = Math.min(stats.length, availableLines);
+
+  // Only create the visible data rows (not all rows then slice)
+  const visibleDataRows = [];
+  for (
+    let i = scrollOffset;
+    i < scrollOffset + visibleRowCount && i < stats.length;
+    i++
+  ) {
+    const stat = stats[i];
     // Get IPs as array (handle both old senderIp and new senderIps format)
     const ips = stat.senderIps || (stat.senderIp ? [stat.senderIp] : []);
     const logLevels = stat.logLevels || [];
 
-    // Calculate the number of rows needed for this cell (based on IPs)
-    const rowCount = Math.max(ips.length, 1);
+    // Extract last octet from each IP and join them
+    const lastOctets = ips
+      .map((ip) => {
+        const parts = ip.split(".");
+        return parts.length === 4 ? parts[3] : ip;
+      })
+      .join(",");
 
-    return h(
-      Box,
-      {
-        key: `${stat.source}-${stat.subsystem}-${index}`,
-        flexDirection: "row",
-        minHeight: rowCount,
-      },
+    visibleDataRows.push(
       h(
         Box,
-        { width: colWidths.source },
-        h(Text, null, truncate(stat.source, colWidths.source))
-      ),
-      h(
-        Box,
-        { width: colWidths.subsystem },
-        h(Text, null, truncate(stat.subsystem, colWidths.subsystem))
-      ),
-      h(
-        Box,
-        { width: colWidths.count },
-        h(Text, null, String(stat.count).padStart(6))
-      ),
-      h(
-        Box,
-        { width: colWidths.ip, flexDirection: "column" },
-        ips.length > 0
-          ? ips.map((ip, ipIdx) =>
-              h(Text, { key: ipIdx }, truncate(ip, colWidths.ip))
-            )
-          : h(Text, null, "")
-      ),
-      h(
-        Box,
-        { width: colWidths.logLevel },
+        {
+          key: `${stat.source}-${stat.subsystem}-${i}`,
+          flexDirection: "row",
+        },
         h(
-          Text,
-          { color: "magenta" },
-          truncate(logLevels.join(","), colWidths.logLevel)
-        )
-      ),
-      h(
-        Box,
-        { width: colWidths.matches },
+          Box,
+          { width: colWidths.source },
+          h(Text, null, truncate(stat.source, colWidths.source))
+        ),
         h(
-          Text,
-          { color: "yellow" },
-          truncate(stat.searchMatches.join(", "), colWidths.matches)
+          Box,
+          { width: colWidths.subsystem },
+          h(Text, null, truncate(stat.subsystem, colWidths.subsystem))
+        ),
+        h(
+          Box,
+          { width: colWidths.count },
+          h(Text, null, String(stat.count).padStart(6))
+        ),
+        h(
+          Box,
+          { width: colWidths.ip },
+          h(Text, null, truncate(lastOctets, colWidths.ip))
+        ),
+        h(
+          Box,
+          { width: colWidths.logLevel },
+          h(
+            Text,
+            { color: "magenta" },
+            truncate(logLevels.join(","), colWidths.logLevel)
+          )
+        ),
+        h(
+          Box,
+          { width: colWidths.matches },
+          h(
+            Text,
+            { color: "yellow" },
+            truncate(stat.searchMatches.join(", "), colWidths.matches)
+          )
         )
-      )
-    );
-  });
-
-  // Summary elements
-  const summaryElements = [
-    h(
-      Box,
-      { key: "summary", marginTop: 1 },
-      h(
-        Text,
-        { color: "green" },
-        `Total: ${totalMessages} msgs │ Subsystems: ${uniqueSubsystems} │ Search terms: ${searchTermCount}`
-      )
-    ),
-  ];
-
-  if (senderIPs.length > 0) {
-    summaryElements.push(
-      h(
-        Box,
-        { key: "senderips" },
-        h(Text, { color: "green" }, `From: ${senderIPs.join(", ")}`)
       )
     );
   }
 
-  // Calculate available height for data rows
-  // Reserve space for: title (1), header (1), separator (1), bottom separator (1), summary (2), padding (2)
-  const reservedLines = 8;
-  const dataRowsHeight = maxHeight
-    ? Math.max(5, maxHeight - reservedLines)
-    : undefined;
+  // Calculate scroll indicator
+  const canScrollUp = scrollOffset > 0;
+  const canScrollDown = scrollOffset + visibleRowCount < stats.length;
+  const hasMoreRows =
+    stats.length > visibleRowCount || canScrollUp || canScrollDown;
+  const scrollInfo = hasMoreRows
+    ? ` [${scrollOffset + 1}-${Math.min(
+        scrollOffset + visibleRowCount,
+        stats.length
+      )}/${stats.length}]`
+    : "";
+
+  // Build scroll indicator row
+  const scrollIndicatorRow = h(
+    Box,
+    { key: "scroll-indicator" },
+    canScrollUp
+      ? h(Text, { color: "cyan" }, "▲ ")
+      : h(Text, { color: "gray" }, "  "),
+    h(Text, { color: "gray" }, `↑↓ scroll${scrollInfo}`),
+    canScrollDown
+      ? h(Text, { color: "cyan" }, " ▼")
+      : h(Text, { color: "gray" }, "  ")
+  );
+
+  // Calculate the height for the data section
+  const dataHeight = visibleRowCount;
 
   return h(
     Box,
-    { flexDirection: "column", padding: 1 },
+    { flexDirection: "column", paddingX: 1 },
+    // Fixed header section - these should always show
     h(
       Text,
       { bold: true, color: "cyan" },
       "═══ Qlik Sense Log Scanner - Statistics ═══"
     ),
     headerRow,
-    h(Text, { color: "gray" }, "─".repeat(totalWidth)),
-    // Scrollable data rows area
+    h(Text, { color: "gray" }, "─".repeat(Math.min(totalWidth, usableWidth))),
+    // Data rows in a fixed-height container
     h(
       Box,
-      {
-        flexDirection: "column",
-        height: dataRowsHeight,
-        overflow: "hidden",
-      },
-      ...dataRows
+      { flexDirection: "column", height: dataHeight, overflow: "hidden" },
+      ...visibleDataRows
     ),
-    h(Text, { color: "gray" }, "─".repeat(totalWidth)),
-    ...summaryElements
+    // Fixed footer section
+    h(Text, { color: "gray" }, "─".repeat(Math.min(totalWidth, usableWidth))),
+    // Always show scroll indicator when there are more rows than visible
+    hasMoreRows && scrollIndicatorRow
   );
 };
 
