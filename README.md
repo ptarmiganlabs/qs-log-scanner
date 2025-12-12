@@ -2,6 +2,8 @@
 
 Receives Qlik Sense Log4Net UDP messages, parses them, and shows a live, terminal UI with aggregated stats per subsystem.
 
+Blog post: [qs-log-scanner: open source tool for exploring Qlik Sense logs](https://ptarmiganlabs.com/qs-log-scanner-open-source-tool-for-exploring-qlik-sense-logs/)
+
 ## What it does
 
 - Listens on a UDP socket (configurable host/port).
