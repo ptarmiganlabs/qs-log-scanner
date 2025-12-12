@@ -101,4 +101,4 @@ class SearchManager {
   }
 }
 
-module.exports = SearchManager;
+export default SearchManager;
