@@ -14,7 +14,7 @@ Receives Qlik Sense Log4Net UDP messages, parses them, and shows a live, termina
 
 ## Requirements
 
-- Node.js `>= 14`
+- Node.js `>= 20`
 
 ## Install
 
@@ -34,6 +34,8 @@ udp:
   maxQueueSize: 10000
 
 display:
+  refreshInterval: 5000
+  maxMessagePreview: 100
   autoRefresh: true
   autoRefreshInterval: 5000
 
@@ -48,6 +50,8 @@ Notes:
 - `udp.host` is the interface to bind to. Use `0.0.0.0` to listen on all interfaces.
 - `receiveBufferSize` increases the UDP receive buffer to better handle bursts.
 - `maxQueueSize` is the maximum number of messages buffered in-process; when exceeded, messages are dropped.
+- `display.autoRefresh` and `display.autoRefreshInterval` control the table refresh.
+- `display.refreshInterval` and `display.maxMessagePreview` are present in `config/default.yaml` but are not currently used by the UI.
 
 ## Run
 
@@ -86,7 +90,7 @@ The stats table aggregates by `(source, subsystem)` and shows:
 - **Source**: parsed from field `0` with `/` stripped and lowercased
 - **Subsystem**: field `6`
 - **Count**: number of messages received for that `(source, subsystem)`
-- **IP**: sender IPs (UI may show a shortened form)
+- **IP**: sender IPs (UI shows last octet(s); full IPs are written to CSV)
 - **Level**: distinct log levels seen for the subsystem
 - **Matches**: search terms that matched for that subsystem
 
@@ -96,7 +100,9 @@ Export writes one row per `(source, subsystem)` with these columns:
 
 `Source,Subsystem,Count,Sender IPs,Log Levels,Search Matches`
 
-Lists are joined with `; ` inside the CSV field. If you don’t provide a filename, it uses `qs-log-scanner-<timestamp>.csv` in the current working directory.
+Lists are joined with `"; "` inside the CSV field. If you don’t provide a filename, it uses `qs-log-scanner-<timestamp>.csv` in the current working directory.
+
+CSV export is the only export supported in the UI.
 
 ## UDP message format
 

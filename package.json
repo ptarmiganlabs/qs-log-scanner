@@ -28,12 +28,9 @@
     "winston": "^3.11.0"
   },
   "engines": {
-    "node": ">=14.0.0"
+    "node": ">=20.0.0"
   },
   "devDependencies": {
-    "@babel/core": "^7.28.5",
-    "@babel/preset-react": "^7.28.5",
-    "@babel/register": "^7.28.3",
     "nodemon": "^3.1.11"
   }
 }
