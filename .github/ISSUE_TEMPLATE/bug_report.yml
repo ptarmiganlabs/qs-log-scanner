@@ -1,0 +1,89 @@
+name: Bug report
+description: Something in qs-log-scanner doesn't work as it should
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting a bug. The README's [Troubleshooting](https://github.com/ptarmiganlabs/qs-log-scanner#troubleshooting) section covers the two most common problems: no messages arriving, and Ink's raw mode error.
+
+        Questions go to [Discussions](https://github.com/ptarmiganlabs/qs-log-scanner/discussions/categories/q-a) instead.
+
+        This issue is public. Qlik Sense log messages carry server names, IP addresses and Windows user names: leave out any you can't share.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: What you did, and what the scanner did. An error it printed, word for word, helps most.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected to happen
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: How to make it happen
+      description: The steps, from `npm start`. Say which key you pressed, or which search term or sort order is involved.
+      placeholder: |
+        1. npm start, with Qlik Sense sending to port 9999
+        2. Press a and add the search term "error"
+        3. ...
+  - type: input
+    id: scanner-version
+    attributes:
+      label: Which commit you run
+      description: "In your clone, `git log -1 --format=%h` prints it."
+      placeholder: "89a6530"
+    validations:
+      required: true
+  - type: input
+    id: node-version
+    attributes:
+      label: Node.js version
+      description: "`node --version` prints it."
+      placeholder: "v22.11.0"
+    validations:
+      required: true
+  - type: input
+    id: platform
+    attributes:
+      label: Operating system and terminal
+      description: Where the scanner runs, and the terminal it runs in.
+      placeholder: "Windows Server 2022, Windows Terminal with PowerShell 7"
+    validations:
+      required: true
+  - type: input
+    id: sense-version
+    attributes:
+      label: Qlik Sense version
+      description: The Qlik Sense Enterprise on Windows release that sends the log events.
+      placeholder: "May 2025 Patch 3"
+  - type: textarea
+    id: config
+    attributes:
+      label: Your config/default.yaml
+      description: Replace the host address with a placeholder if you can't share it.
+      render: yaml
+  - type: input
+    id: stats
+    attributes:
+      label: Queue and Dropped
+      description: "If messages go missing: the **Queue** and **Dropped** numbers in the Statistics panel."
+      placeholder: "Queue: 0 | Dropped: 1200"
+  - type: textarea
+    id: logs
+    attributes:
+      label: Log lines
+      description: "With `logging.logToFile` on, the lines around the problem from `logs/scanner.log`. Remove host names, IP addresses and user names you can't share."
+      render: text
+  - type: checkboxes
+    id: public
+    attributes:
+      label: Before you send it
+      options:
+        - label: I've left out server names, IP addresses and user names I can't share, because this issue is public
+          required: true

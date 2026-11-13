@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Ask a question
+    url: https://github.com/ptarmiganlabs/qs-log-scanner/discussions/categories/q-a
+    about: How to do something with qs-log-scanner, or whether it can. Questions get answered in Discussions.
+  - name: README
+    url: https://github.com/ptarmiganlabs/qs-log-scanner#readme
+    about: Configuring the UDP listener, the keyboard keys, the table columns, CSV export and troubleshooting.

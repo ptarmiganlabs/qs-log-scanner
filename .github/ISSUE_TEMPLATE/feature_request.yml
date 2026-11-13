@@ -1,0 +1,27 @@
+name: Feature request
+description: Something qs-log-scanner could do that it doesn't
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Not sure yet what you need, or want to talk it over first? [Ideas in Discussions](https://github.com/ptarmiganlabs/qs-log-scanner/discussions/categories/ideas) is the place.
+  - type: textarea
+    id: problem
+    attributes:
+      label: What you're trying to do
+      description: The task, and what gets in the way today. Say what you're looking for in the logs, if it helps explain it.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What would help
+      description: How you'd like the scanner to do it, such as a new column, key or export.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: What you do now instead
+      description: Other tools or workarounds you use for it, if any.
