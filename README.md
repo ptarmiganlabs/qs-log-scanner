@@ -1,8 +1,39 @@
-# Qlik Sense UDP Log Scanner
+<h1 align="center">qs-log-scanner</h1>
+
+<p align="center"><strong>Terminal UI for exploring Qlik Sense log events sent over UDP</strong></p>
+
+<p align="center">
+<a href="https://github.com/ptarmiganlabs/qs-log-scanner/blob/main/LICENSE"><img src="https://img.shields.io/badge/License-MIT-green" alt="License: MIT"></a>
+<a href="https://github.com/sponsors/ptarmiganlabs"><img src="https://img.shields.io/badge/Sponsor-%E2%9D%A4-db61a2?logo=githubsponsors" alt="Sponsor Ptarmigan Labs on GitHub"></a>
+</p>
+
+<p align="center">
+<a href="#install">Install</a> ·
+<a href="https://github.com/ptarmiganlabs/qs-log-scanner/discussions">Questions</a> ·
+<a href="https://github.com/ptarmiganlabs/qs-log-scanner/issues">Report a bug</a> ·
+<a href="https://github.com/sponsors/ptarmiganlabs">❤️ Sponsor</a>
+</p>
 
 Receives Qlik Sense Log4Net UDP messages, parses them, and shows a live, terminal UI with aggregated stats per subsystem.
 
 Blog post: [qs-log-scanner: open source tool for exploring Qlik Sense logs](https://ptarmiganlabs.com/qs-log-scanner-open-source-tool-for-exploring-qlik-sense-logs/)
+
+## ❤️ Support the project
+
+qs-log-scanner is free and open source, under the MIT licence. If you use it, please consider sponsoring its development: sponsorships pay for maintenance, bug fixes and new features, and keep the project going.
+
+**[❤️ Sponsor Ptarmigan Labs on GitHub](https://github.com/sponsors/ptarmiganlabs)**
+
+Other ways to help:
+
+- ⭐ **Star the repository**: it helps others find the project.
+- 💬 **Share your feedback** in [Discussions](https://github.com/ptarmiganlabs/qs-log-scanner/discussions): tell us how you use it.
+- 🐛 **Report issues** in [Issues](https://github.com/ptarmiganlabs/qs-log-scanner/issues).
+- 🍴 **Contribute**: pull requests are welcome.
+
+_Maintained by [Göran Sander](https://github.com/mountaindude) and supported by [Ptarmigan Labs](https://ptarmiganlabs.com)._
+
+---
 
 ## What it does
 
