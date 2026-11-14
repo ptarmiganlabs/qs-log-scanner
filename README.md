@@ -14,6 +14,10 @@
 <a href="https://github.com/sponsors/ptarmiganlabs">❤️ Sponsor</a>
 </p>
 
+<p align="center">
+  <img src="docs/img/qs-log-scanner-demo.gif" alt="qs-log-scanner in a terminal: log events from the Qlik Sense servers counted per subsystem as they arrive, then a search term matched in every message" width="880">
+</p>
+
 Receives Qlik Sense Log4Net UDP messages, parses them, and shows a live, terminal UI with aggregated stats per subsystem.
 
 Blog post: [qs-log-scanner: open source tool for exploring Qlik Sense logs](https://ptarmiganlabs.com/qs-log-scanner-open-source-tool-for-exploring-qlik-sense-logs/)
